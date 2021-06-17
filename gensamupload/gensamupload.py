@@ -12,6 +12,7 @@ import smtplib
 from email.message import EmailMessage
 from shutil import copyfile
 import csv
+from config import *
 
 @click.command()
 @click.option('-r', '--runid', required=True,
@@ -165,10 +166,14 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
         csvout = open(gensam_csv, "w")
 
         csvout.write("provnummer,urvalskriterium,GISAID_accession\n")
-        for sample in samples:
-            csvout.write(','.join((sample, "-", "", "\n")))
-            gensamcsv_samples.append(sample)
-            log.write(writelog("LOG", "Wrote GENSAM .csv file to : " + gensam_csv))
+        for sample, criteria in samples.items():
+
+            if criteria not in selection_criteria:
+                sys.exit("ERROR: selected criteria for sample" + sample + " is not valid.")
+            else:
+                csvout.write(','.join((sample, selection_criteria[criteria] , "", "\n")))
+                gensamcsv_samples.append(sample)
+                log.write(writelog("LOG", "Wrote GENSAM .csv file to : " + gensam_csv))
             
     #Open the connection to the sFTP
     if no_upload:
@@ -292,15 +297,12 @@ def checkinput(runid, demultiplexdir, inputdir, regioncode, labcode, logdir,
             sys.exit("ERROR: No lineage file for run " + runid + " found.")
 
     #Make sure region code is an accepted one
-    acceptedregions = ['01','03','04','05','06','07','08','09','10','12','13',
-                       '14','17','18','19','20','21','22','23','24','25']
+    #acceptedregions = ['01','03','04','05','06','07','08','09','10','12','13','14','17','18','19','20','21','22','23','24','25']
     if regioncode not in acceptedregions:
         sys.exit("ERROR: Region code " + regioncode + " is not an accepted one.")
 
     #Make sure labcode is an accepted one
-    acceptedlabs = ['SE110', 'SE120', 'SE240', 'SE320', 'SE450', 'SE250', 'SE310', 'SE300', 'SE230',
-                    'SE540', 'SE100', 'SE130', 'SE140', 'SE330', 'SE350', 'SE400', 'SE420', 'SE430',
-                    'SE440', 'SE600', 'SE610', 'SE620', 'SE700', 'SE710', 'SE720', 'SE730', 'SENPC']
+    #acceptedlabs = ['SE110', 'SE120', 'SE240', 'SE320', 'SE450', 'SE250', 'SE310', 'SE300', 'SE230','SE540', 'SE100', 'SE130', 'SE140', 'SE330', 'SE350', 'SE400', 'SE420', 'SE430','SE440', 'SE600', 'SE610', 'SE620', 'SE700', 'SE710', 'SE720', 'SE730', 'SENPC']
     if labcode not in acceptedlabs:
         sys.exit("ERROR: Lab-code " + labcode + " is not an accepted one.")
 
@@ -319,11 +321,16 @@ def checkinput(runid, demultiplexdir, inputdir, regioncode, labcode, logdir,
 
 def sample_sheet(sspath):
     Sheet = SampleSheet(sspath)
-    data = []
+    data = {}
     for sample in Sheet.samples:
         sample_name = sample['Sample_Name']
         sample_description = sample['Description']
         
+        if len(sample_description.split("_")) != 15:
+            sys.exit("ERROR: description field for sample" +sample + "is not complete")
+        else:
+            sample_criteria = int(sample_description.split("_")[-1]) #eller [15]
+
         #Skip samples set to runType = 01 (desc. field 3)
         #These are samples which have been re-sequenced, so they have already been uploaded to GENSAM.
         runtype = sample_description.split("_")[2]
@@ -334,7 +341,8 @@ def sample_sheet(sspath):
         if sample_name.startswith(('NegCtrl', 'PosCtrl', 'PosKon', 'NegKon')):
             continue
         else:
-            data.append(sample_name)
+            #populate a dictionary with samples and their selection criteria value
+            data[sample_name] = sample_criteria
 
     return data
     

@@ -84,7 +84,6 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
     #Get a list of all fastq and fasta files to upload
     syncdict = defaultdict(lambda: defaultdict(dict))
     log.write(writelog("LOG", "Finding all files to upload."))
-    
     for sample in samples:
         #Find all fastq files to upload.
         fastqpath = os.path.join(inputdir, runid, 'fastq')
@@ -99,7 +98,6 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
                 if not no_mail:
                     email_error(logfile, "FASTQ UPLOAD")
                 sys.exit("ERROR: Found fastq file with ending other than R1(R2)_001.fastq.gz")
-        
         #Find all fasta files to upload based on existing links.
         fastapath = os.path.join(inputdir, runid, 'fasta')
         for fastafile in glob.glob(fastapath + "/" + sample + "*consensus.fa"):
@@ -109,6 +107,7 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
 
     #Check that all fastq files are paired
     #This code feels a bit clunky
+    
     for sample in syncdict:
         if syncdict[sample]['fastq']['R1']:
             if not syncdict[sample]['fastq']['R2']:
@@ -164,17 +163,16 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
     else:
         gensam_csv = os.path.join(gensamcsvdir, "_".join((regioncode,labcode,date_simple, "komplettering.csv")))
         csvout = open(gensam_csv, "w")
-
         csvout.write("provnummer,urvalskriterium,GISAID_accession\n")
         for sample, criteria in samples.items():
-
-            if criteria not in selection_criteria:
-                sys.exit("ERROR: selected criteria for sample" + sample + " is not valid.")
-            else:
-                csvout.write(','.join((sample, selection_criteria[criteria] , "", "\n")))
-                gensamcsv_samples.append(sample)
-                log.write(writelog("LOG", "Wrote GENSAM .csv file to : " + gensam_csv))
-            
+            if syncdict[sample]['fasta']:
+                if criteria not in selection_criteria:
+                    sys.exit("ERROR: selected criteria for sample" + sample + " is not valid.")
+                else:
+                    csvout.write(','.join((sample.split('_')[0], selection_criteria[criteria] , " \n")))
+                    gensamcsv_samples.append(sample)
+                    log.write(writelog("LOG", "Wrote GENSAM .csv file to : " + gensam_csv))
+    
     #Open the connection to the sFTP
     if no_upload:
         log.write(writelog("LOG", "No-upload flag set. Will just try the sFTP connection."))
@@ -198,10 +196,10 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
             for row in csv_reader:
             #add sample names to dict
                 uploads_dict[row[0]] = ''
+                
 
     #Open file with previously uploaded files for writing
     uploads_samples = open(uploadedsamples, "a")
-
     #fastq and fasta file
     for sample in syncdict:
         #Skip sample if not in the gensamcsv file. Only really matters if there is a manually supplied csv file
@@ -223,6 +221,8 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
             fastqR1_trgt = '_'.join((regioncode, labcode, samplename_R1))
             samplename_R2 = sample.replace("_", "-") + '_2.fastq.gz'
             fastqR2_trgt = '_'.join((regioncode, labcode, samplename_R2))
+            print(sample, fastqR1_trgt, sample.split('_')[0])
+    
             #Upload to sFTP
             if not no_upload:
                 sftp.put(fastqR1_src, fastqR1_trgt)
@@ -262,12 +262,13 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
     #Send an e-mail to FOHM (and clinicalgenomics) that upload has happened
     #csv file should be attached
     if no_upload:
+        #email_fohm(gensam_csv)
         log.write(writelog("LOG", "No-upload flag set. Skipping mail to FOHM"))
     elif no_mail:
         log.write(writelog("LOG", "No-mail flag set. Skipping mail to FOHM"))
     else:
         email_fohm(gensam_csv)
-
+        
     #Finished the workflow
     log.write(writelog("LOG", "Finished GENSAM upload workflow."))
     log.close()
@@ -295,14 +296,12 @@ def checkinput(runid, demultiplexdir, inputdir, regioncode, labcode, logdir,
         #Specifically check if the lineage file is in place
         if not os.path.exists(os.path.join(inputdir, runid, 'lineage', runid + "_lineage_report.txt")):
             sys.exit("ERROR: No lineage file for run " + runid + " found.")
-
     #Make sure region code is an accepted one
-    #acceptedregions = ['01','03','04','05','06','07','08','09','10','12','13','14','17','18','19','20','21','22','23','24','25']
+
     if regioncode not in acceptedregions:
         sys.exit("ERROR: Region code " + regioncode + " is not an accepted one.")
 
     #Make sure labcode is an accepted one
-    #acceptedlabs = ['SE110', 'SE120', 'SE240', 'SE320', 'SE450', 'SE250', 'SE310', 'SE300', 'SE230','SE540', 'SE100', 'SE130', 'SE140', 'SE330', 'SE350', 'SE400', 'SE420', 'SE430','SE440', 'SE600', 'SE610', 'SE620', 'SE700', 'SE710', 'SE720', 'SE730', 'SENPC']
     if labcode not in acceptedlabs:
         sys.exit("ERROR: Lab-code " + labcode + " is not an accepted one.")
 
@@ -327,10 +326,11 @@ def sample_sheet(sspath):
         sample_description = sample['Description']
         
         if len(sample_description.split("_")) != 15:
-            sys.exit("ERROR: description field for sample" +sample + "is not complete")
+            sample_criteria= 7 #'Information saknas'
+            print(sample, '----> No selection criteria given')
         else:
             sample_criteria = int(sample_description.split("_")[-1]) #eller [15]
-
+            
         #Skip samples set to runType = 01 (desc. field 3)
         #These are samples which have been re-sequenced, so they have already been uploaded to GENSAM.
         runtype = sample_description.split("_")[2]
@@ -343,7 +343,6 @@ def sample_sheet(sspath):
         else:
             #populate a dictionary with samples and their selection criteria value
             data[sample_name] = sample_criteria
-
     return data
     
 def writelog(logtype, message):
@@ -374,6 +373,7 @@ def email_error(logloc, errorstep):
     s.quit()
 
 def email_fohm(csvfile):
+    print(csvfile)
     csv_filename = os.path.basename(csvfile)
     
     msg = EmailMessage()
@@ -381,18 +381,21 @@ def email_fohm(csvfile):
 
     msg['Subject'] = csv_filename
     msg['From'] = "clinicalgenomics@gu.se"
-    msg['To'] = "gensam@folkhalsomyndigheten.se"
-    msg['Cc'] = "clinicalgenomics@gu.se"
-
+    #msg['To'] = "gensam@folkhalsomyndigheten.se"
+    #msg['Cc'] = "clinicalgenomics@gu.se"
+    msg['To'] = "sima.rahimi@gu.se"
     # Add the attachment
-    with open(csvfile, 'rb') as f:
+    with open(csvfile, 'r') as f:
         data = f.read()
-        msg.add_attachment(data, maintype='text', subtype='plain', filename=csv_filename)
-
+        print(data)
+        #msg.add_attachment(data, maintype='text', subtype='txt', filename=csv_filename)
+        
     #Send the messege
-    s = smtplib.SMTP('smtp.gu.se')
-    s.send_message(msg)
-    s.quit()
+    #s = smtplib.SMTP('smtp.gu.se')
+    #s.send_message(msg)
+    #s.quit()
+    #with smtplib.SMTP('smtp.gu.se') as s:
+    #    s.send_message(msg)
 
 if __name__ == '__main__':
     main()

@@ -21,7 +21,7 @@ from config import *
               default='/seqstore/instruments/nextseq_500175_gc/Demultiplexdir',
               help='Path to demultiplexdir')
 @click.option('-i', '--inputdir', required=True,
-              default='/medstore/results/clinical/SARS-CoV-2-typing/nextseq_data',
+              default='/medstore/results/clinical/SARS-CoV-2-typing/nextseq_data/files_to_gensam',
               help='Path to location of files to upload')
 @click.option('-s', '--samplesheetname', required=True,
               default='SampleSheet.csv',
@@ -88,7 +88,7 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
         #Find all fastq files to upload.
         fastqpath = os.path.join(inputdir, runid, 'fastq')
         for fastqfile in glob.glob(fastqpath + "/" + sample + "*fastq.gz"):
-            targetlink = os.readlink(fastqfile)
+            targetlink = os.readlink(fastqfile) #readlink
             if targetlink.endswith("R1_001.fastq.gz"): #Fastq files need to have this extension right now. It's ugly
                 syncdict[sample]['fastq']['R1'] = targetlink
             elif targetlink.endswith("R2_001.fastq.gz"):
@@ -101,7 +101,7 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
         #Find all fasta files to upload based on existing links.
         fastapath = os.path.join(inputdir, runid, 'fasta')
         for fastafile in glob.glob(fastapath + "/" + sample + "*consensus.fa"):
-            targetlink = os.readlink(fastafile)
+            targetlink = os.readlink(fastafile) #readlink
             #Store info in dict
             syncdict[sample]['fasta'] = targetlink
 
@@ -342,7 +342,8 @@ def sample_sheet(sspath):
             continue
         else:
             #populate a dictionary with samples and their selection criteria value
-            data[sample_name] = sample_criteria
+            sample_id = sample_name.split('_')[0]
+            data[sample_id] = sample_criteria
     return data
     
 def writelog(logtype, message):

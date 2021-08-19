@@ -262,7 +262,6 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
     #Send an e-mail to FOHM (and clinicalgenomics) that upload has happened
     #csv file should be attached
     if no_upload:
-        #email_fohm(gensam_csv)
         log.write(writelog("LOG", "No-upload flag set. Skipping mail to FOHM"))
     elif no_mail:
         log.write(writelog("LOG", "No-mail flag set. Skipping mail to FOHM"))
@@ -327,9 +326,8 @@ def sample_sheet(sspath):
         
         if len(sample_description.split("_")) != 15:
             sample_criteria= 7 #'Information saknas'
-            print(sample, '----> No selection criteria given')
         else:
-            sample_criteria = int(sample_description.split("_")[-1]) #eller [15]
+            sample_criteria = int(sample_description.split("_")[-1]) 
             
         #Skip samples set to runType = 01 (desc. field 3)
         #These are samples which have been re-sequenced, so they have already been uploaded to GENSAM.
@@ -374,29 +372,27 @@ def email_error(logloc, errorstep):
     s.quit()
 
 def email_fohm(csvfile):
-    print(csvfile)
     csv_filename = os.path.basename(csvfile)
     
     msg = EmailMessage()
     msg.set_content("Bifogat är en lista över uppladdade prover.\n\nMed vänliga hälsningar,\n Clinical Genomics Göteborg")
-
+    
     msg['Subject'] = csv_filename
     msg['From'] = "clinicalgenomics@gu.se"
-    #msg['To'] = "gensam@folkhalsomyndigheten.se"
-    #msg['Cc'] = "clinicalgenomics@gu.se"
-    msg['To'] = "sima.rahimi@gu.se"
+    msg['To'] = "gensam@folkhalsomyndigheten.se"
+    msg['Cc'] = "clinicalgenomics@gu.se"
+
     # Add the attachment
-    with open(csvfile, 'r') as f:
+    with open(csvfile, 'rb') as f:
         data = f.read()
-        print(data)
-        #msg.add_attachment(data, maintype='text', subtype='txt', filename=csv_filename)
-        
+        msg.add_attachment(data, maintype='text', subtype='plain', filename=csv_filename)
+
     #Send the messege
-    #s = smtplib.SMTP('smtp.gu.se')
-    #s.send_message(msg)
-    #s.quit()
-    #with smtplib.SMTP('smtp.gu.se') as s:
-    #    s.send_message(msg)
+    s = smtplib.SMTP('smtp.gu.se')
+    s.send_message(msg)
+    s.quit()
+
+    
 
 if __name__ == '__main__':
     main()

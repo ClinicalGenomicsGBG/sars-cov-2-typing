@@ -9,7 +9,7 @@ import glob
 
 def arg():
     parser = argparse.ArgumentParser(prog="pangolin_fillemptyfield.py")
-    parser.add_argument("-f", "--filepath", help="path to excel file to parse")
+    parser.add_argument("-f", "--filepath", help="path to pangolin file to parse")
     parser.add_argument("-e", "--eurofins", action="store_true", help="check for eurofins files automatically")
     parser.add_argument("-n", "--nextseq", action="store_true", help="check for nextseq files automatically")
     parser.add_argument("-g", "--gensam", action="store_true", help="check for nextseq files automatically that will be uploaded to GENSAM")
@@ -95,9 +95,13 @@ def fill_empty_cells(args):
         df.to_csv(os.path.dirname(os.path.abspath(args.filepath))+"/"+os.path.basename(args.filepath).replace(".txt","_gensam.txt"), index=None, header=True, sep="\t")
 
     else:
-        df = pd.DataFrame(pd.read_csv(args.filepath, sep="\t")).fillna(value = "NULL")
-        df.to_csv(os.path.dirname(os.path.abspath(args.filepath))+"/"+os.path.basename(os.path.dirname(args.filepath))+"_"+os.path.basename(args.filepath).replace(".txt","_fillempty.txt"), index=None, header=True, sep="\t") # tab sep out
+        df = pd.DataFrame(pd.read_csv(args.filepath, sep=",")).fillna(value = "NULL")
+        for i,row in df.iterrows():
+            df["taxon"] = df["taxon"].replace(row["taxon"], "_".join(row["taxon"].split\
+("_")[1:4])) # change taxon names
 
+        df.to_csv(os.path.dirname(os.path.abspath(args.filepath))+"/"+os.path.basename(args.filepath).replace("\
+.txt","_fillempty.txt"), index=None, header=True, sep="\t") # tab sep output with NULL
 
 def main():
     args = arg()

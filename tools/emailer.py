@@ -31,7 +31,7 @@ def email_micro(subject, body):
     msg['Subject'] = f'{subject}'
     msg['From'] = "clinicalgenomics@gu.se"
     msg['To'] = ["johan.ringlander@vgregion.se", "josefin.olausson@vgregion.se"]
-    msg['Cc'] = "anders.lind.cgg@gu.se"
+    msg['Cc'] = ["anders.lind.cgg@gu.se", "sima.rahimi@gu.se"]
 
     #Send the messege
     s = smtplib.SMTP('smtp.gu.se')

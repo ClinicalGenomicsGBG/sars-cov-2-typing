@@ -10,3 +10,4 @@ dependencies:
   - sample-sheet
   - pysftp
   - pandas
+  - usher

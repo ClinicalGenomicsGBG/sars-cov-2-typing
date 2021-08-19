@@ -244,7 +244,7 @@ def main(runid, demultiplexdir, logdir, inputdir, samplesheetname, regioncode, l
 
     #Pangolin classification lineage file    
     lineagepath = os.path.join(inputdir, runid, 'lineage', runid + "_lineage_report_gensam.txt")
-    lineage_trgt = '_'.join((regioncode, labcode, date_simple, "pangolin_classification.txt"))
+    lineage_trgt = '_'.join((regioncode, labcode, date_simple, "pangolin_classification_format3.txt"))
     if not no_upload:
         sftp.put(lineagepath, lineage_trgt)
 

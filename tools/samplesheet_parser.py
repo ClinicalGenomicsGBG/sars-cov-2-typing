@@ -7,7 +7,8 @@ from sample_sheet import SampleSheet
 import json
 import argparse
 import os
-
+import csv
+import itertools
 
 def arg():
     parser = argparse.ArgumentParser(prog="samplesheet_parser.py")
@@ -40,9 +41,18 @@ def sample_sheet(path,run):
                 'postalcode': description.split("_")[6],
                 'ct_value': description.split("_")[7]
             })
-
+    #print metadata into json file
     with open(f"/medstore/results/clinical/SARS-CoV-2-typing/nextseq_data/{run}/metadata/{run}_metadata.json", 'w') as outfile:
         json.dump(data, outfile,indent=4)
+    #print metadata into csv file
+    csv_columns=['Sample_ID','referensnummer','date','runtype', 'age','gender','lab_reference','postalcode','ct_value']
+    with open(f"/medstore/results/clinical/SARS-CoV-2-typing/nextseq_data/{run}/metadata/{run}_metadata.csv", "w") as csv_file:
+        writer = csv.DictWriter(csv_file,csv_columns)
+        writer.writeheader()
+        for sample_id,metadata in data.items():
+            row = {'Sample_ID': sample_id}
+            row.update(metadata[0]) 
+            writer.writerow(row)
 
 def main():
     args = arg()

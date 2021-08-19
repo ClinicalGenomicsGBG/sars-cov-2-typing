@@ -37,3 +37,28 @@ def email_micro(subject, body):
     s = smtplib.SMTP('smtp.gu.se')
     s.send_message(msg)
     s.quit()
+
+def email_general(msg_to, msg_from, subject, body, attachment=None):
+    msg = EmailMessage()
+    msg.set_content(f'{body}\n'
+                    f'\n'
+                    f'Kind regards,\n'
+                    f'Clinical Genomics Gothenburg')
+
+    msg['Subject'] = f'{subject}'
+    msg['From'] = msg_from
+    msg['To'] = msg_to
+    #msg['Cc'] = "clinicalgenomics@gu.se"
+
+    if attachment: #Add attachment if provided
+        import os
+        csv_filename = os.path.basename(attachment)
+
+        with open(attachment, 'rb') as f:
+            data = f.read()
+            msg.add_attachment(data, maintype='text', subtype='plain', filename=csv_filename)
+
+    #Send the messege
+    s = smtplib.SMTP('smtp.gu.se')
+    s.send_message(msg)
+    s.quit()

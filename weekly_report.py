@@ -8,6 +8,7 @@ import re
 from collections import defaultdict
 import csv
 import glob
+from tools.emailer import email_general
 
 @click.command()
 @click.option('--logdir', required=True,
@@ -21,7 +22,9 @@ import glob
               help='Path/to/eurofind_data/directory, uses default if path not specified')
 @click.option('-o', '--outfile', required=True,
               help='Path/to/output/file')
-def main (logdir, nextseqdir, eurofinsdir, outfile):
+@click.option('-e', '--send-email', is_flag=True,
+              help='Send results as e-mail')
+def main (logdir, nextseqdir, eurofinsdir, outfile, send_email):
     #Set up the logfile and start loggin
     now = datetime.datetime.now()
     logfile = os.path.join(logdir, "weekly_" + now.strftime("%y%m%d_%H%M%S") + ".log")
@@ -117,6 +120,21 @@ def main (logdir, nextseqdir, eurofinsdir, outfile):
     # Write the data from eurofins
     write_eurofins(eurofins_dict, outf)
 
+    #Close the output file in case it should be sent as e-mail
+    outf.close()
+
+    #Send an e-mail if flagged to do
+    if send_email:
+        recipients = ["anders.lind.cgg@gu.se"]
+
+        logger.info(f'Sending e-mail to {",".join(recipients)}')
+        #Set up an e-mail
+        msg_to = recipients
+        msg_from = "clinicalgenomics@gu.se"
+        message_subject = 'COVIDSeq in-house sequencing results'
+        message_body = 'The latest pangolin types from the COVIDseq can be found in the attached file.'
+        attachment = outfile
+        email_general(msg_to, msg_from, message_subject, message_body, attachment)
 
 def write_eurofins(eurofins_dict, outf):
     #Print header
